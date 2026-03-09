@@ -1,0 +1,269 @@
+{
+  "info": {
+    "title": "Markdown to Email API",
+    "description": "Convert Markdown to email-safe HTML with multiple templates and rendering engines.",
+    "version": "1.0.0"
+  },
+  "openapi": "3.1.0",
+  "components": {
+    "schemas": {
+      "Template": {
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "description"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "minimal"
+          },
+          "name": {
+            "type": "string",
+            "example": "Minimal"
+          },
+          "description": {
+            "type": "string",
+            "example": "Clean, airy layout — perfect for personal or transactional emails."
+          }
+        }
+      },
+      "Engine": {
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "description"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "basic"
+          },
+          "name": {
+            "type": "string",
+            "example": "Basic"
+          },
+          "description": {
+            "type": "string",
+            "example": "Built-in markdown → HTML with inline CSS. Zero dependencies, fast."
+          }
+        }
+      },
+      "TemplatesResponse": {
+        "type": "object",
+        "required": [
+          "templates",
+          "engines"
+        ],
+        "properties": {
+          "templates": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Template"
+            }
+          },
+          "engines": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Engine"
+            }
+          }
+        }
+      },
+      "ConvertRequest": {
+        "type": "object",
+        "required": [
+          "markdown"
+        ],
+        "properties": {
+          "markdown": {
+            "type": "string",
+            "description": "Markdown content to convert. May include YAML front matter delimited by `---`.",
+            "example": "# Hello\n\nWelcome to our **newsletter**."
+          },
+          "template": {
+            "type": "string",
+            "enum": [
+              "minimal",
+              "newsletter",
+              "announcement"
+            ],
+            "default": "minimal",
+            "description": "Email template to wrap the converted HTML in."
+          },
+          "header_image": {
+            "type": "string",
+            "format": "uri",
+            "description": "URL of a header image. Overrides `header_image` from front matter if both are provided."
+          }
+        }
+      },
+      "ConvertResponse": {
+        "type": "object",
+        "required": [
+          "html",
+          "plainText"
+        ],
+        "properties": {
+          "html": {
+            "type": "string",
+            "description": "The fully rendered email-safe HTML document."
+          },
+          "plainText": {
+            "type": "string",
+            "description": "A plain-text version of the email content."
+          }
+        }
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "required": [
+          "error"
+        ],
+        "properties": {
+          "error": {
+            "type": "string",
+            "description": "Human-readable error message."
+          }
+        }
+      }
+    }
+  },
+  "servers": [
+    {
+      "url": "https://xtqkkglqftvfpgnjwfmb.supabase.co/functions/v1",
+      "description": "Production"
+    }
+  ],
+  "paths": {
+    "/templates": {
+      "get": {
+        "operationId": "getTemplates",
+        "summary": "List available templates and engines",
+        "description": "Returns the list of email templates and rendering engines supported by the API.",
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TemplatesResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/convert": {
+      "post": {
+        "operationId": "convertMarkdown",
+        "summary": "Convert Markdown to email HTML",
+        "description": "Converts a Markdown string into email-safe HTML wrapped in the chosen template. Also returns a plain-text version. Supports optional YAML front matter (e.g. `header_image`).",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConvertRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful conversion",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConvertResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request (missing or invalid markdown field)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Method not allowed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "x-zuplo-route": {
+          "corsPolicy": "none",
+          "handler": {
+            "export": "urlForwardHandler",
+            "module": "$import(@zuplo/runtime)",
+            "options": {
+              "baseUrl": "https://xtqkkglqftvfpgnjwfmb.supabase.co/functions/v1"
+            }
+          },
+          "policies": {
+            "inbound": [
+              "api-key-inbound",
+              "rate-limit-inbound"
+            ]
+          },
+          "mcp": {
+            "type": "tool",
+            "name": "convertMarkdowntoHTML"
+          }
+        }
+      }
+    },
+    "/mcp": {
+      "x-zuplo-path": {
+        "pathMode": "open-api"
+      },
+      "post": {
+        "summary": "MCP Server",
+        "description": "Default MCP Server",
+        "x-zuplo-route": {
+          "corsPolicy": "none",
+          "handler": {
+            "export": "mcpServerHandler",
+            "module": "$import(@zuplo/runtime)",
+            "options": {
+              "operations": [
+                {
+                  "file": "./config/routes.oas.json",
+                  "id": "convertMarkdown"
+                }
+              ],
+              "name": "MD2HTML"
+            }
+          },
+          "policies": {
+            "inbound": []
+          }
+        },
+        "operationId": "b22a068f-692f-4a5f-a38b-b993bff414d3"
+      }
+    }
+  }
+}
