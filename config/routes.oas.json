@@ -93,6 +93,16 @@
             "default": "minimal",
             "description": "Email template to wrap the converted HTML in."
           },
+          "engine": {
+            "type": "string",
+            "enum": [
+              "basic",
+              "mjml",
+              "react-email"
+            ],
+            "default": "basic",
+            "description": "Rendering engine to use for conversion. `basic` uses inline CSS, `mjml` uses the MJML framework, `react-email` uses React Email components."
+          },
           "header_image": {
             "type": "string",
             "format": "uri",
